@@ -1,11 +1,14 @@
 import curses
 import random
+
 SQUARE_SIZE = 10
-TOPLEFT = [5,5]
+TOPLEFT = [9,3]
 TR_FRAME = 3
 TR_TIME = 20 #in ms vvvv
-POP_DELAY = 100
+POP_DELAY = 30
 def drw(wd,x,y,num):
+    for i in range(y,y+(SQUARE_SIZE // 2)):
+        wd.addstr(i,x," "*SQUARE_SIZE)
     wd.addch(y,x,curses.ACS_ULCORNER)
     wd.addch(y,x+(SQUARE_SIZE-1),curses.ACS_URCORNER)
     wd.addch(y+(SQUARE_SIZE // 2 - 1),x,curses.ACS_LLCORNER)
@@ -17,7 +20,22 @@ def drw(wd,x,y,num):
     st = str(num)
     if (len(str(num))%2):
         st = "0" + st
-    wd.addstr(y+((SQUARE_SIZE//2) // 2),x + (SQUARE_SIZE//2-1) - ((len(str(num)) - 1)//2),st)
+    wd.addstr(y+((SQUARE_SIZE//2) // 2),x + (SQUARE_SIZE//2-1) - ((len(str(num)) - 1)//2),st,curses.color_pair(0))
+def drw2(wd,x,y,ns,cl = True):
+    SQUARE_SIZE = ns
+    if (cl):
+        for i in range(y,y+(SQUARE_SIZE // 2)):
+            wd.addstr(i,x," "*SQUARE_SIZE)
+    wd.addch(y,x,curses.ACS_ULCORNER)
+    wd.addch(y,x+(SQUARE_SIZE-1),curses.ACS_URCORNER)
+    wd.addch(y+(SQUARE_SIZE // 2 - 1),x,curses.ACS_LLCORNER)
+    wd.addch(y+(SQUARE_SIZE // 2 - 1),x+(SQUARE_SIZE-1),curses.ACS_LRCORNER)
+    wd.hline(y,x+1,curses.ACS_HLINE,(SQUARE_SIZE - 2))
+    wd.hline(y+(SQUARE_SIZE//2 - 1),x+1,curses.ACS_HLINE,(SQUARE_SIZE - 2))
+    wd.vline(y+1,x,curses.ACS_VLINE,(SQUARE_SIZE//2 - 2))
+    wd.vline(y+1,x + (SQUARE_SIZE-1),curses.ACS_VLINE,(SQUARE_SIZE//2 - 2))
+
+
 def drwcord(wd,x,y,num):
     drw(wd,SQUARE_SIZE*x + TOPLEFT[0],(SQUARE_SIZE//2)*y + TOPLEFT[1],num)
 def cvt(v,md):
@@ -64,6 +82,8 @@ def render(wd):
     oidn = []
     qr = []
     wd.clear()
+    wd.box(curses.ACS_VLINE,curses.ACS_HLINE)
+    drw2(wd,TOPLEFT[0]-2,TOPLEFT[1]-1,SQUARE_SIZE*4+4,False)
     idn.clear()
     for i in range(0,4):
         s = ""
@@ -84,6 +104,8 @@ def render(wd):
     
     for fr in range(0,TR_FRAME):
         wd.clear()
+        wd.box(curses.ACS_VLINE,curses.ACS_HLINE)
+        drw2(wd,TOPLEFT[0]-2,TOPLEFT[1]-1,SQUARE_SIZE*4+4,False)
         if (fr != TR_FRAME-1):
             for a in qrem:
                 dx = cvt(a[1][1],0) - cvt(a[0][1],0)
@@ -112,7 +134,12 @@ def render(wd):
     
     curses.napms(POP_DELAY)
     for a in qr:
+         t_size = SQUARE_SIZE-4
+         drw2(wd,cvt(a[1],0)+2,cvt(a[0],1)+1,t_size)
+         wd.refresh()
+         curses.napms(POP_DELAY)
          drwcord(wd,a[1],a[0],board[a[0]][a[1]])
+
     wd.refresh()
 
 
@@ -165,22 +192,71 @@ UPKEY = [ord("w"),curses.KEY_UP]
 RIGHTKEY = [ord("d"),curses.KEY_RIGHT]
 DOWNKEY = [ord("s"),curses.KEY_DOWN]
 LEFTKEY = [ord("a"),curses.KEY_LEFT]
+QUITKEY = ord("b")
+NEWKEY = ord("n")
 def move(dirx,diry):
     compute(dirx,diry)
     combine(dirx,diry)
     compute(dirx,diry)
 
+def quitq(scr,wd):
+    wd.addstr(25,14,"Are you sure you want to quit?")
+    wd.addstr(26,17,"Confirm: V | Cancel: C")
+    wd.refresh()
+    while True:
+        cm = scr.getch()
+        if (cm == ord("v")):
+            exit()
+        if (cm == ord("c")):
+            wd.move(25,1)
+            wd.clrtoeol()
+            wd.move(26,1)
+            wd.clrtoeol()
+            wd.box(curses.ACS_VLINE,curses.ACS_HLINE)
+            wd.refresh()
+            return
+def newq(scr,wd,bl):
+    if (bl):
+        wd.addstr(25,25,"New Game?")
+        wd.addstr(26,18,"Confirm: V | Cancel: C")
+    else:
+        wd.addstr(25,18,"Game Over. New Game?")
+        wd.addstr(26,18,"Confirm: V | Quit: B")
+    wd.refresh()
+    while True:
+        cm = scr.getch()
+        if (cm == ord("v")):
+            return True
+        if (cm == ord("c") and bl):
+            wd.move(25,1)
+            wd.clrtoeol()
+            wd.move(26,1)
+            wd.clrtoeol()
+            wd.box(curses.ACS_VLINE,curses.ACS_HLINE)
+            wd.refresh()
+            return False
+        if (cm == QUITKEY and not bl):
+            exit()
 
+cnt = 0
 def game(scr,wd):
     global id
     global avail
     global board
     global oid
     global oboard
+    global cnt
     for i in range(0,4):
         for j in range(0,4):
             board[i][j] = 0
+            oboard[i][j] = 0
             id[i][j] = 0
+            oid[i][j] = 0
+            avail.clear()
+            for k in range(1,21):
+                avail.append(k)
+            cnt = 14
+
     for _ in range(0,2):
         while True:
             x = random.randrange(0,4)
@@ -196,23 +272,30 @@ def game(scr,wd):
             break
     #game logic
     render(wd)
-    cnt = 14
     while True:
-        if (cnt == 0):
-            prevb = board
-            combine(0,1)
-            combine(0,-1)
-            combine(1,0)
-            combine(-1,0)
-            if (prevb == board):
-                break
-            board = prevb
         nextid = avail.pop()
         for i in range(0,4):
             for j in range(0,4):
                 oid[i][j] = id[i][j]
                 oboard[i][j] = board[i][j]
+        if (cnt == 0):
+            move(0,1)
+            move(0,-1)
+            move(1,0)
+            move(-1,0)
+            if (board == oboard):
+                newq(scr,wd,False)
+                return
+            for i in range(0,4):
+                for j in range(0,4):
+                    id[i][j] = oid[i][j]
+                    board[i][j] = oboard[i][j]
         keyp = scr.getch()
+        if (keyp == QUITKEY):
+            quitq(scr,wd)
+        if (keyp == NEWKEY):
+            if (newq(scr,wd,True)):
+                return
         if (keyp in UPKEY):
             move(0,-1)
         if (keyp in RIGHTKEY):
@@ -239,41 +322,73 @@ def game(scr,wd):
         board[avb[rng][0]][avb[rng][1]] = val
         id[avb[rng][0]][avb[rng][1]] = nextid
         print(f"next avail: {nextid}")
-        cnt += 1
+        cnt -= 1
         render(wd)
-    
-        
+
+asciiart = """     
+██████   
+     ██  
+ █████   
+██       
+███████  
+         
+         
+ █████  
+██   ██ 
+██   ██ 
+██   ██ 
+ █████  
+         
+         
+██   ██  
+██   ██  
+███████  
+     ██  
+     ██  
+         
+         
+ █████   
+██   ██  
+ █████   
+██   ██  
+ █████   
+         """
+
 
 def init(scr):
-    global idprev
     global id
     global avail
     global board
-    #variables
-    ext = False
-    mainscr = True
     #init
     curses.noecho()
     curses.cbreak()
     curses.curs_set(0)
     scr.keypad(True)
-    scr.addstr(0,0,"2048 TERMINAL")
+    curses.init_pair(1,curses.COLOR_YELLOW,curses.COLOR_BLACK)
+    scr.addstr(0,0,"2048 TERMINAL",curses.color_pair(1))
     scr.refresh()
     mainwin = curses.newwin(30,60,1,0)
-    stats = curses.newwin(30,12,1,60)
-    inp = curses.newwin(5,72,31,0)
+    titleb = curses.newwin(30,17,1,60)
+    inp = curses.newwin(5,77,31,0)
+    mainwin.attron(curses.color_pair(1))
+    titleb.attron(curses.color_pair(1))
+    inp.attron(curses.color_pair(1))
     mainwin.box(curses.ACS_VLINE,curses.ACS_HLINE)
-    stats.box(curses.ACS_VLINE,curses.ACS_HLINE)
+    titleb.box(curses.ACS_VLINE,curses.ACS_HLINE)
     inp.box(curses.ACS_VLINE,curses.ACS_HLINE)
+    inp.attroff(curses.color_pair(1))
+    titleb.attroff(curses.color_pair(1))
+    inp.addstr(1,3,"MOVE: WASD/ARROW_KEY   NEW_GAME: N   QUIT: B   CONFIRM: V   CANCEL: C")
+    inp.addstr(3,31, "--KEYBINDS--")
+    start_y = 1
+    for s in asciiart.split("\n"):
+        titleb.addstr(start_y,5,s)
+        start_y += 1
     mainwin.refresh()
-    stats.refresh()
+    titleb.refresh()
     inp.refresh()
-    game(scr,mainwin)
-    curses.echo()
-    curses.nocbreak()
-    scr.keypad(False)
-    quit()
-
+    while True:
+        game(scr,mainwin)
 
 
 curses.wrapper(init)
