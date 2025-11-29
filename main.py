@@ -6,6 +6,9 @@ TOPLEFT = [9,3]
 TR_FRAME = 3
 TR_TIME = 20 #in ms vvvv
 POP_DELAY = 30
+SCORE = 0
+titleb = "nothing"
+inp = "nothing"
 def drw(wd,x,y,num):
     for i in range(y,y+(SQUARE_SIZE // 2)):
         wd.addstr(i,x," "*SQUARE_SIZE)
@@ -21,6 +24,66 @@ def drw(wd,x,y,num):
     if (len(str(num))%2):
         st = "0" + st
     wd.addstr(y+((SQUARE_SIZE//2) // 2),x + (SQUARE_SIZE//2-1) - ((len(str(num)) - 1)//2),st,curses.color_pair(0))
+
+
+asciiart = """     
+██████   
+     ██  
+ █████   
+██       
+███████  
+         
+         
+ █████  
+██   ██ 
+██   ██ 
+██   ██ 
+ █████  
+         
+         
+██   ██  
+██   ██  
+███████  
+     ██  
+     ██  
+         
+         
+ █████   
+██   ██  
+ █████   
+██   ██  
+ █████   
+         """
+def rst():
+    curses.echo()
+    curses.nocbreak()
+    curses.curs_set(1)
+
+def rs():
+    curses.resize_term(0, 0)
+    curses.noecho()
+    curses.cbreak()
+    curses.curs_set(0)
+    if (curses.LINES < 37 or curses.COLS < 78):
+        print("Terminal window too small. Consider resizing the terminal window larger.")
+        rst()
+        exit()
+    global titleb
+    global inp
+    titleb.attron(curses.color_pair(1))
+    inp.attron(curses.color_pair(1))
+    titleb.box(curses.ACS_VLINE,curses.ACS_HLINE)
+    inp.box(curses.ACS_VLINE,curses.ACS_HLINE)
+    inp.attroff(curses.color_pair(1))
+    titleb.attroff(curses.color_pair(1))
+    inp.addstr(1,3,"MOVE: WASD/ARROW_KEY   NEW_GAME: N   QUIT: B   CONFIRM: V   CANCEL: C")
+    inp.addstr(3,31, "--KEYBINDS--")
+    start_y = 1
+    for s in asciiart.split("\n"):
+        titleb.addstr(start_y,5,s)
+        start_y += 1
+    titleb.refresh()
+    inp.refresh()
 def drw2(wd,x,y,ns,cl = True):
     SQUARE_SIZE = ns
     if (cl):
@@ -77,6 +140,7 @@ def render(wd):
     global oboard
     global remid
     global idn
+    global SCORE
     query = []
     qrem = []
     oidn = []
@@ -84,6 +148,7 @@ def render(wd):
     wd.clear()
     wd.box(curses.ACS_VLINE,curses.ACS_HLINE)
     drw2(wd,TOPLEFT[0]-2,TOPLEFT[1]-1,SQUARE_SIZE*4+4,False)
+    wd.addstr(TOPLEFT[1]-2,TOPLEFT[0]-1,f"SCORE: {SCORE}")
     idn.clear()
     for i in range(0,4):
         s = ""
@@ -91,8 +156,8 @@ def render(wd):
             s += str(id[i][j])
             if (id[i][j]):
                 idn[id[i][j]] = [i,j]
-        print(s)
-    print("\n")
+#        print(s)
+#    print("\n")
     for i in range(0,4):
         for j in range(0,4):
             if (oid[i][j]):
@@ -106,11 +171,12 @@ def render(wd):
         wd.clear()
         wd.box(curses.ACS_VLINE,curses.ACS_HLINE)
         drw2(wd,TOPLEFT[0]-2,TOPLEFT[1]-1,SQUARE_SIZE*4+4,False)
+        wd.addstr(TOPLEFT[1]-2,TOPLEFT[0]-1,f"SCORE: {SCORE}")
         if (fr != TR_FRAME-1):
             for a in qrem:
                 dx = cvt(a[1][1],0) - cvt(a[0][1],0)
                 dy = cvt(a[1][0],1) - cvt(a[0][0],1)
-                print(dx,dy)
+#                print(dx,dy)
                 dx = dx//TR_FRAME
                 dy = dy//TR_FRAME
                 
@@ -170,6 +236,7 @@ def combine(dirx,diry):
     global avail
     global board
     global remid
+    global SCORE
     for i in range(0,4):
         for j in range(0,4):
             dir = dirx
@@ -186,6 +253,7 @@ def combine(dirx,diry):
                     id[y][x] = id[y-diry][x-dirx]
                     id[y-diry][x-dirx] = 0
                     board[y][x] = 2*board[y][x]
+                    SCORE += board[y][x]
                     board[y-diry][x-dirx] = 0
 
 UPKEY = [ord("w"),curses.KEY_UP]
@@ -206,6 +274,7 @@ def quitq(scr,wd):
     while True:
         cm = scr.getch()
         if (cm == ord("v")):
+            rst()
             exit()
         if (cm == ord("c")):
             wd.move(25,1)
@@ -236,6 +305,7 @@ def newq(scr,wd,bl):
             wd.refresh()
             return False
         if (cm == QUITKEY and not bl):
+            rst()
             exit()
 
 cnt = 0
@@ -246,6 +316,8 @@ def game(scr,wd):
     global oid
     global oboard
     global cnt
+    global SCORE
+    SCORE = 0
     for i in range(0,4):
         for j in range(0,4):
             board[i][j] = 0
@@ -304,8 +376,11 @@ def game(scr,wd):
             move(0,1)
         if (keyp in LEFTKEY):
             move(-1,0)
+        if (keyp == curses.KEY_RESIZE):
+            rs()
         if (board == oboard):
             avail.append(nextid)
+            
             continue
         avb = []
         cnt = 0
@@ -321,45 +396,21 @@ def game(scr,wd):
         val = 2 + (random.randrange(0,10) == 0)*2
         board[avb[rng][0]][avb[rng][1]] = val
         id[avb[rng][0]][avb[rng][1]] = nextid
-        print(f"next avail: {nextid}")
+#        print(f"next avail: {nextid}")
         cnt -= 1
         render(wd)
-
-asciiart = """     
-██████   
-     ██  
- █████   
-██       
-███████  
-         
-         
- █████  
-██   ██ 
-██   ██ 
-██   ██ 
- █████  
-         
-         
-██   ██  
-██   ██  
-███████  
-     ██  
-     ██  
-         
-         
- █████   
-██   ██  
- █████   
-██   ██  
- █████   
-         """
-
 
 def init(scr):
     global id
     global avail
     global board
+    global inp
+    global titleb
     #init
+    if (curses.LINES < 37 or curses.COLS < 78):
+        print("Terminal window too small. Consider resizing the terminal window.")
+        rst()
+        exit()
     curses.noecho()
     curses.cbreak()
     curses.curs_set(0)
@@ -371,22 +422,9 @@ def init(scr):
     titleb = curses.newwin(30,17,1,60)
     inp = curses.newwin(5,77,31,0)
     mainwin.attron(curses.color_pair(1))
-    titleb.attron(curses.color_pair(1))
-    inp.attron(curses.color_pair(1))
     mainwin.box(curses.ACS_VLINE,curses.ACS_HLINE)
-    titleb.box(curses.ACS_VLINE,curses.ACS_HLINE)
-    inp.box(curses.ACS_VLINE,curses.ACS_HLINE)
-    inp.attroff(curses.color_pair(1))
-    titleb.attroff(curses.color_pair(1))
-    inp.addstr(1,3,"MOVE: WASD/ARROW_KEY   NEW_GAME: N   QUIT: B   CONFIRM: V   CANCEL: C")
-    inp.addstr(3,31, "--KEYBINDS--")
-    start_y = 1
-    for s in asciiart.split("\n"):
-        titleb.addstr(start_y,5,s)
-        start_y += 1
+    rs()
     mainwin.refresh()
-    titleb.refresh()
-    inp.refresh()
     while True:
         game(scr,mainwin)
 
