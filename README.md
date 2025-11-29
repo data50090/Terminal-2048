@@ -4,7 +4,7 @@
 
 ![Game Preview](assets/game_preview.png)
 
-## How to install / play?
+## How to install/play?
 
 Make sure you have:
 - Python
