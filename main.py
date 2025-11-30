@@ -7,6 +7,7 @@ TR_FRAME = 3
 TR_TIME = 20 #in ms vvvv
 POP_DELAY = 30
 SCORE = 0
+WINSTATE = False
 titleb = "nothing"
 inp = "nothing"
 def drw(wd,x,y,num):
@@ -285,18 +286,22 @@ def quitq(scr,wd):
             wd.refresh()
             return
 def newq(scr,wd,bl):
-    if (bl):
+    if (bl == 1):
         wd.addstr(25,25,"New Game?")
         wd.addstr(26,18,"Confirm: V | Cancel: C")
     else:
-        wd.addstr(25,18,"Game Over. New Game?")
-        wd.addstr(26,18,"Confirm: V | Quit: B")
+        if (bl == 0):
+            wd.addstr(25,18,"Game Over. New Game?")
+            wd.addstr(26,18,"Confirm: V | Quit: B")
+        else:
+            wd.addstr(25,17,"You Got 2048! New Game?")
+            wd.addstr(26,13,"Confirm: V | Continue Playing: C")
     wd.refresh()
     while True:
         cm = scr.getch()
         if (cm == ord("v")):
             return True
-        if (cm == ord("c") and bl):
+        if (cm == ord("c") and bl > 0):
             wd.move(25,1)
             wd.clrtoeol()
             wd.move(26,1)
@@ -317,7 +322,9 @@ def game(scr,wd):
     global oboard
     global cnt
     global SCORE
+    global WINSTATE
     SCORE = 0
+    WINSTATE = False
     for i in range(0,4):
         for j in range(0,4):
             board[i][j] = 0
@@ -350,6 +357,11 @@ def game(scr,wd):
             for j in range(0,4):
                 oid[i][j] = id[i][j]
                 oboard[i][j] = board[i][j]
+                if (board[i][j] == 2048 and not WINSTATE):
+                    WINSTATE = True
+                    if (newq(scr,wd,2)):
+                        return
+
         if (cnt == 0):
             move(0,1)
             move(0,-1)
