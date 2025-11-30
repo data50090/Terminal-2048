@@ -20,3 +20,5 @@ To run the code, navigate to the directory with the terminal and run:
 python main.py
 ```
 Make sure to resize your terminal large enough for the game BEFORE you run `python main.py`.
+
+*For Wardaya School project*
