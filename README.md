@@ -2,7 +2,7 @@
 
 2048 in the terminal.
 
-![Game Preview](assets/game_preview.png)
+![Game Preview](assets/preview.png)
 
 ## How to install/play?
 
