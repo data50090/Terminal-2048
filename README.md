@@ -21,4 +21,12 @@ python main.py
 ```
 Make sure to resize your terminal large enough for the game BEFORE you run `python main.py`.
 
+.
+
+.
+
+.
+
+.
+
 *For Wardaya School project*
